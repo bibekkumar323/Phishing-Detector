@@ -3,7 +3,7 @@
 **Student:** Bibek Kumar (001331932)  
 **University:** University of Greenwich  
 **Module:** COMP1682 — Final Year Individual Project  
-**Supervisor:** Yasmine / Barzinji  
+**Supervisor:** Barzinji  
 
 ---
 
