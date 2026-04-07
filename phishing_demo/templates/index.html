@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PhishGuard — Email Threat Analyser</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #080c14;
+    --surface:   #0d1422;
+    --border:    #1a2640;
+    --accent:    #00e5ff;
+    --danger:    #ff3b5c;
+    --safe:      #00e676;
+    --warn:      #ffb300;
+    --text:      #c8d8f0;
+    --muted:     #4a6080;
+    --mono:      'Space Mono', monospace;
+    --sans:      'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── scanline overlay ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,.08) 2px,
+      rgba(0,0,0,.08) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .logo-badge {
+    width: 48px; height: 48px;
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--accent);
+    box-shadow: 0 0 20px rgba(0,229,255,.2), inset 0 0 10px rgba(0,229,255,.05);
+  }
+
+  .header-text h1 {
+    font-family: var(--mono);
+    font-size: 22px;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-text p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: .5px;
+  }
+
+  .status-pill {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--safe);
+    background: rgba(0,230,118,.07);
+    border: 1px solid rgba(0,230,118,.2);
+    padding: 6px 14px;
+    border-radius: 20px;
+  }
+
+  .status-pill::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 6px var(--safe);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .4; }
+  }
+
+  /* ── Input card ── */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  .card-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-label::before {
+    content: '';
+    display: block;
+    width: 4px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    background: rgba(0,0,0,.4);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 16px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,255,.07);
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all .2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 24px rgba(0,229,255,.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ── Loading ── */
+  .loader {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-top: 14px;
+  }
+
+  .loader.active { display: flex; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Overall verdict ── */
+  .verdict-banner {
+    display: none;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    border: 1px solid;
+    animation: fadeSlide .4s ease;
+  }
+
+  .verdict-banner.phishing {
+    background: rgba(255,59,92,.07);
+    border-color: rgba(255,59,92,.3);
+  }
+
+  .verdict-banner.legitimate {
+    background: rgba(0,230,118,.07);
+    border-color: rgba(0,230,118,.3);
+  }
+
+  .verdict-banner.show { display: flex; align-items: center; gap: 20px; }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .verdict-icon {
+    font-size: 40px;
+    flex-shrink: 0;
+  }
+
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: .6;
+    margin-bottom: 4px;
+  }
+
+  .verdict-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .verdict-banner.phishing  .verdict-value { color: var(--danger); }
+  .verdict-banner.legitimate .verdict-value { color: var(--safe);   }
+
+  .verdict-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── Model results grid ── */
+  .models-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  @media(max-width: 600px) { .models-grid { grid-template-columns: 1fr; } }
+
+  .model-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: none;
+    animation: fadeSlide .4s ease;
+  }
+
+  .model-card.show { display: block; }
+
+  .model-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .model-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .model-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .badge-phishing   { background: rgba(255,59,92,.15); color: var(--danger); border: 1px solid rgba(255,59,92,.3); }
+  .badge-legitimate { background: rgba(0,230,118,.12); color: var(--safe);   border: 1px solid rgba(0,230,118,.3); }
+
+  /* ── Confidence bar ── */
+  .conf-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .conf-bar-track {
+    height: 5px;
+    background: rgba(255,255,255,.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .conf-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+    width: 0;
+  }
+
+  .fill-phishing   { background: linear-gradient(90deg, var(--danger), #ff8c00); }
+  .fill-legitimate { background: linear-gradient(90deg, var(--safe),   #00b0ff); }
+
+  /* ── Trigger words ── */
+  .words-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .word-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid rgba(255,59,92,.25);
+    background: rgba(255,59,92,.07);
+    color: #ff8fa3;
+    letter-spacing: .5px;
+  }
+
+  .chip.safe-chip {
+    border-color: rgba(0,230,118,.2);
+    background: rgba(0,230,118,.06);
+    color: #80cbc4;
+  }
+
+  /* ── highlighted email ── */
+  .highlighted-card {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 28px;
+    animation: fadeSlide .4s ease;
+  }
+
+  .highlighted-card.show { display: block; }
+
+  .email-display {
+    background: rgba(0,0,0,.35);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+  }
+
+  mark {
+    background: rgba(255,59,92,.25);
+    color: #ff8fa3;
+    border-radius: 3px;
+    padding: 1px 3px;
+    border-bottom: 1px solid rgba(255,59,92,.5);
+  }
+
+  /* ── empty state ── */
+  .empty-hint {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2;
+  }
+
+  .empty-hint .big { font-size: 36px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-badge">⚡</div>
+    <div class="header-text">
+      <h1>PhishGuard</h1>
+      <p>Adaptive Email Threat Analyser · Bibek Kumar · 001331932</p>
+    </div>
+    <div class="status-pill">SYSTEM ONLINE</div>
+  </header>
+
+  <!-- Input -->
+  <div class="input-card">
+    <div class="card-label">Email Content</div>
+    <textarea id="emailInput" placeholder="Paste email subject and body here...&#10;&#10;Example: Your account has been compromised. Click here to verify your identity immediately or your account will be suspended."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="analyseBtn" onclick="analyse()">
+        ⚡ Analyse Email
+      </button>
+      <button class="btn btn-ghost" onclick="clearAll()">✕ Clear</button>
+      <button class="btn btn-ghost" onclick="loadSample('phishing')">Try Phishing Sample</button>
+      <button class="btn btn-ghost" onclick="loadSample('legit')">Try Legit Sample</button>
+    </div>
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span>Running models...</span>
+    </div>
+  </div>
+
+  <!-- Verdict banner -->
+  <div class="verdict-banner" id="verdictBanner">
+    <div class="verdict-icon" id="verdictIcon"></div>
+    <div>
+      <div class="verdict-label">Overall Verdict — Majority Vote</div>
+      <div class="verdict-value" id="verdictValue"></div>
+      <div class="verdict-sub" id="verdictSub"></div>
+    </div>
+  </div>
+
+  <!-- Model cards -->
+  <div class="models-grid" id="modelsGrid">
+    <div class="empty-hint" id="emptyHint" style="grid-column:1/-1">
+      <div class="big">🛡</div>
+      Paste an email above and click <strong>Analyse Email</strong><br/>
+      to scan it across all four ML models
+    </div>
+  </div>
+
+  <!-- Highlighted email -->
+  <div class="highlighted-card" id="highlightedCard">
+    <div class="card-label">Trigger Word Highlights</div>
+    <div class="email-display" id="emailDisplay"></div>
+  </div>
+
+</div>
+
+<script>
+const SAMPLES = {
+  phishing: `Subject: Urgent: Your account will be suspended
+
+Dear Customer,
+
+We have detected suspicious activity on your account. Your account has been temporarily limited.
+
+Please verify your identity immediately by clicking the link below:
+http://secure-verify-account.com/confirm
+
+Failure to verify within 24 hours will result in permanent suspension of your account. Provide your username, password and credit card details to restore access.
+
+Regards,
+Security Team`,
+
+  legit: `Subject: Team meeting rescheduled to Thursday
+
+Hi everyone,
+
+Just a quick note to let you know that our weekly team meeting has been moved from Wednesday to Thursday this week due to a scheduling conflict.
+
+The meeting will still be at 10am in the usual conference room. Please update your calendars accordingly.
+
+Let me know if you have any questions.
+
+Best,
+Sarah`
+};
+
+function loadSample(type) {
+  document.getElementById('emailInput').value = SAMPLES[type];
+}
+
+function clearAll() {
+  document.getElementById('emailInput').value = '';
+  document.getElementById('verdictBanner').className = 'verdict-banner';
+  document.getElementById('highlightedCard').className = 'highlighted-card';
+  document.getElementById('modelsGrid').innerHTML = `
+    <div class="empty-hint" id="emptyHint" style="grid-column:1/-1">
+      <div class="big">🛡</div>
+      Paste an email above and click <strong>Analyse Email</strong><br/>
+      to scan it across all four ML models
+    </div>`;
+}
+
+async function analyse() {
+  const text = document.getElementById('emailInput').value.trim();
+  if (!text) { alert('Please enter some email text first.'); return; }
+
+  const btn    = document.getElementById('analyseBtn');
+  const loader = document.getElementById('loader');
+
+  btn.disabled = true;
+  loader.classList.add('active');
+  document.getElementById('verdictBanner').className = 'verdict-banner';
+  document.getElementById('highlightedCard').className = 'highlighted-card';
+  document.getElementById('modelsGrid').innerHTML = '';
+
+  try {
+    const res  = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+
+    renderVerdict(data);
+    renderModels(data.results);
+    renderHighlights(text, data.results);
+
+  } catch(e) {
+    alert('Connection error — make sure Flask is running.');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    loader.classList.remove('active');
+  }
+}
+
+function renderVerdict({ overall, votes, results }) {
+  const banner = document.getElementById('verdictBanner');
+  const isPhishing = overall === 'Phishing';
+  banner.className = `verdict-banner show ${isPhishing ? 'phishing' : 'legitimate'}`;
+  document.getElementById('verdictIcon').textContent = isPhishing ? '🚨' : '✅';
+  document.getElementById('verdictValue').textContent = overall.toUpperCase();
+  document.getElementById('verdictSub').textContent =
+    `${votes} of ${results.length} models flagged this as phishing`;
+}
+
+function renderModels(results) {
+  const grid = document.getElementById('modelsGrid');
+  grid.innerHTML = '';
+  results.forEach((r, i) => {
+    const isP     = r.is_phishing;
+    const confStr = r.confidence ? `${r.confidence}%` : 'N/A';
+    const chips   = (r.top_words || []).slice(0, 8).map(w =>
+      `<span class="chip ${isP ? '' : 'safe-chip'}">${w.word}</span>`
+    ).join('');
+
+    const card = document.createElement('div');
+    card.className = 'model-card';
+    card.innerHTML = `
+      <div class="model-header">
+        <div class="model-name">${r.model}</div>
+        <div class="model-badge ${isP ? 'badge-phishing' : 'badge-legitimate'}">
+          ${r.prediction}
+        </div>
+      </div>
+      <div class="conf-row">
+        <span>Confidence</span>
+        <span>${confStr}</span>
+      </div>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill ${isP ? 'fill-phishing' : 'fill-legitimate'}"
+             id="bar-${i}" style="width:0"></div>
+      </div>
+      <div class="words-label">Top Trigger Words</div>
+      <div class="word-chips">${chips || '<span style="color:var(--muted);font-size:12px;font-family:var(--mono)">No significant words found</span>'}</div>
+    `;
+    grid.appendChild(card);
+
+    // Animate in
+    setTimeout(() => {
+      card.classList.add('show');
+      if (r.confidence) {
+        setTimeout(() => {
+          document.getElementById(`bar-${i}`).style.width = r.confidence + '%';
+        }, 100);
+      }
+    }, i * 100);
+  });
+}
+
+function renderHighlights(rawText, results) {
+  // Collect all trigger words across models
+  const allWords = new Set();
+  results.forEach(r => (r.top_words || []).forEach(w => allWords.add(w.word.toLowerCase())));
+
+  if (!allWords.size) return;
+
+  // Sort by length descending to avoid partial replacements
+  const wordList = Array.from(allWords).sort((a,b) => b.length - a.length);
+
+  let html = escapeHtml(rawText);
+  wordList.forEach(word => {
+    const escaped = escapeHtml(word);
+    const regex   = new RegExp(`\\b(${escaped})\\b`, 'gi');
+    html = html.replace(regex, `<mark>$1</mark>`);
+  });
+
+  document.getElementById('emailDisplay').innerHTML = html;
+  document.getElementById('highlightedCard').className = 'highlighted-card show';
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Allow Ctrl+Enter to submit
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') analyse();
+});
+</script>
+</body>
+</html>
