@@ -3,7 +3,7 @@
 **Student:** Bibek Kumar (001331932)  
 **University:** University of Greenwich  
 **Module:** COMP1682 — Final Year Individual Project  
-**Supervisor:** Ala Barzinji  
+**Supervisor:** Dr Ala Barzinji  
 
 ---
 
@@ -28,7 +28,7 @@ FYP-Phishing-Detector/
 │   │   └── nazario.csv                      # Download from Kaggle (see below)
 │   └── processed/
 │       ├── clean_emails.csv                 # Download from Google Drive (see below)
-│       └── synthetic_phishing_emails.csv    # Included in repo — 300 AI-generated phishing emails
+│       └── synthetic_phishing_emails.csv    # Included in repo — 1,500 AI-generated phishing emails
 │
 ├── notebooks/
 │   ├── 01_merge_clean.ipynb                 # Dataset preparation and cleaning
@@ -50,6 +50,18 @@ FYP-Phishing-Detector/
 │       ├── phase2_heatmaps.png
 │       ├── phase2_fp_fn_trends.png
 │       └── phase2_vs_phase1.png
+│
+├── phishing_demo/                           # Flask web demonstration interface
+│   ├── app.py                               # Flask application entry point
+│   ├── models/                              # Trained .pkl model files
+│   │   ├── tfidf_vectorizer.pkl
+│   │   ├── logistic_regression.pkl
+│   │   ├── linear_svm.pkl
+│   │   ├── random_forest.pkl
+│   │   └── xgboost.pkl
+│   ├── templates/
+│   │   └── index.html                       # Web interface template
+│   └── README.md                            # Demo setup instructions
 │
 ├── .gitignore                               # Excludes large data files from Git
 ├── requirements.txt                         # Python dependencies
@@ -92,7 +104,7 @@ Download `clean_emails.csv` and place it in `data/processed/`.
 | Enron corpus | 29,767 | 15,791 legitimate / 13,976 phishing |
 | Nazario corpus | 1,565 | 1,565 phishing |
 | **Final cleaned dataset** | **29,833** | 15,447 phishing / 14,386 legitimate |
-| Synthetic phishing emails | 300 | Phishing (1) — 6 attack categories |
+| Synthetic phishing emails | 1,500 | Phishing (1) — 6 attack categories |
 
 **Train/test split:** 80/20 stratified — 23,866 train / 5,967 test
 
@@ -204,6 +216,22 @@ notebooks/03_phase_2_augmentation.ipynb
 Runs 16 training configurations (4 models × 4 ratios). Saves figures and metrics to `outputs/`.
 
 > **Always use Kernel → Restart & Run All** to ensure cells run in the correct order.
+
+---
+
+## Web Demonstration Interface
+
+A Flask-based web demo is included in the `phishing_demo/` folder. It allows real-time classification of email text using all four trained models simultaneously.
+
+### Running the demo
+
+```bash
+cd phishing_demo
+pip install flask
+python app.py
+```
+
+Then open **http://127.0.0.1:5000** in your browser. Enter an email subject and body to see predictions from all four models, confidence scores, majority vote verdict, and trigger word highlighting.
 
 ---
 
