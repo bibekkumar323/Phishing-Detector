@@ -82,7 +82,7 @@ Download `enron.csv` and `nazario.csv` from the link above and place them in `da
 
 | File | Place in | Description |
 |------|----------|-------------|
-| `enron.csv` | `data/raw/` | Enron legitimate email corpus (Klimt & Yang, 2004) |
+| `enron.csv` | `data/raw/` | Enron email corpus-contains both legitimate and phishing emails (Klimt & Yang, 2004) |
 | `nazario.csv` | `data/raw/` | Nazario phishing email corpus (Nazario, 2007) |
 
 ### Cleaned Dataset — Google Drive
